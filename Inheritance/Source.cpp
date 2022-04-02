@@ -2,6 +2,7 @@
 #include<iostream>
 #include<string>
 #include<fstream>
+#include<Windows.h>
 using std::cout; using std::cin;using std::endl;
 
 
@@ -74,6 +75,11 @@ public:// реализаци€ инкапсул€ции константным методом
 		os << age;
 		return os;
 	}
+	virtual std::ifstream& scan(std::ifstream& is)
+	{
+		is >> last_name >> first_name >> age;
+		return is;
+	}
 };
 
 std::ostream& operator << (std::ostream& os, const Human& obj)
@@ -84,6 +90,10 @@ std::ostream& operator << (std::ostream& os, const Human& obj)
 std::ofstream& operator << (std::ofstream& os, const Human& obj)
 {
 	return obj.print(os);
+}
+std::ifstream& operator >> (std::ifstream& is,Human& obj)
+{
+	return obj.scan(is);
 }
 
 #define EMPLOYEE_TAKE_PARAMETERS	const std::string& position
@@ -124,6 +134,12 @@ public:
 		os.width(10);
 		os << position;
 		return os;
+	}
+	std::ifstream& scan(std::ifstream& is)
+	{
+		Human::scan(is);
+		is >> position;
+		return is;
 	}
 };
 
@@ -166,6 +182,12 @@ public:
 		Employee::print(os) << " ";
 		 os << salary;
 		 return os;
+	}
+	std::ifstream& scan(std::ifstream& is)
+	{
+		Employee::scan(is);
+		is >> salary;
+		return is;
 	}
 };
 
@@ -229,10 +251,25 @@ public:
 		os << hours;
 		return os;
 	}
+	std::ifstream& scan(std::ifstream& is)
+	{
+		Employee::scan(is);
+		is >> rate >> hours;
+		return is;
+	}
 };
+
+Employee* EmployeeFactory(const std::string& type)
+{
+	if (type.find("class PermanentEmployee")!=std::string::npos)return new PermanentEmployee("","",0,"",0);
+	if (type.find("class HourlyEmployee")!=std::string::npos)return new HourlyEmployee("","",0,"",0,0);
+}
+
+//#define SAVE_TO_FILE
 
 int main()
 {
+#ifdef SAVE_TO_FILE
 	using namespace std;
 	std::string str = "Hello";
 	cout << str.c_str()[1] << endl;
@@ -264,7 +301,7 @@ int main()
 		fout.width(23);
 		fout << left;
 		fout << std::string(typeid(*department[i]).name()) << ':';
-			fout << * department[i] << endl;
+		fout << *department[i] << endl;
 	}
 	fout.close();
 	system(" start notepad file.txt");
@@ -273,4 +310,51 @@ int main()
 	{
 		delete department[i];
 	}
+#endif // SAVE_TO_FILE
+	using namespace std;
+	SetConsoleCP(1251);
+	SetConsoleOutputCP(1251);
+	Employee** department = nullptr;
+	std::ifstream fin("file.txt");
+	int n = 0;
+	if (fin.is_open()) 
+	{ 
+		//cout << fin.tellg() << endl;
+		string employee_type;// определ€ем количество записей в файле, дл€  того чтобы выделить пам€ть под
+		//сотрудников
+		//int n = 0;// размер массива
+		for (; !fin.eof(); ++n)
+		{
+			getline(fin, employee_type);
+		}
+		n--;
+		cout << n << endl;
+		//выдел€ем пам€ть под массив
+		department = new Employee*[n] {};
+		//возвращаем курсор в начало файла
+		cout << fin.tellg() << endl;
+		fin.clear();//очищаем поток 
+		fin.seekg(0);//задаем распложение курсора
+		cout << fin.tellg() << endl;
+		//загружаем данные из файла в массив
+		for (int i{0};i < n; ++i)
+		{
+			getline(fin, employee_type,':');
+			department[i] = EmployeeFactory(employee_type);
+			fin >> *department[i];
+		}
+	}
+	else { std::cerr << "Error: file not found" << endl; }
+
+	for (int i{ 0 }; i < n; ++i)
+	{
+		cout << *department[i] << endl;
+	}
+
+	for (int i{ 0 }; i < n; ++i)
+	{
+		delete department[i];
+	}
+	delete[]department;
+	fin.close();
 }
